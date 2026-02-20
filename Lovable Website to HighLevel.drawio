@@ -1,0 +1,43 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36" version="29.5.1">
+  <diagram name="Page-1" id="o6rBxRKtOWCY2f6oc6tU">
+    <mxGraphModel dx="2084" dy="743" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="dcC46aU1-XgSIU8uLkri-1" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="Customer Submits&lt;br&gt;Information to&lt;br&gt;Lovable Website&lt;br&gt;Such as Contact Data" vertex="1">
+          <mxGeometry height="60" width="30" x="60" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="dcC46aU1-XgSIU8uLkri-3" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=card;whiteSpace=wrap;size=20;arcSize=12;fillColor=#d5e8d4;strokeColor=#82b366;" value="Legendary Academy Lovable Website" vertex="1">
+          <mxGeometry height="60" width="100" x="180" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="dcC46aU1-XgSIU8uLkri-4" edge="1" parent="1" source="dcC46aU1-XgSIU8uLkri-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=-0.02;entryY=0.483;entryDx=0;entryDy=0;entryPerimeter=0;" target="dcC46aU1-XgSIU8uLkri-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dcC46aU1-XgSIU8uLkri-9" edge="1" parent="1" source="dcC46aU1-XgSIU8uLkri-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" target="dcC46aU1-XgSIU8uLkri-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dcC46aU1-XgSIU8uLkri-5" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.database;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Supabase" vertex="1">
+          <mxGeometry height="60" width="60" x="350" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="dcC46aU1-XgSIU8uLkri-6" edge="1" parent="1" source="dcC46aU1-XgSIU8uLkri-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" target="dcC46aU1-XgSIU8uLkri-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dcC46aU1-XgSIU8uLkri-7" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;shape=card;whiteSpace=wrap;size=20;arcSize=12;fillColor=#f8cecc;strokeColor=#b85450;" value="HighLevel" vertex="1">
+          <mxGeometry height="60" width="100" x="690" y="405" as="geometry" />
+        </mxCell>
+        <mxCell id="dcC46aU1-XgSIU8uLkri-12" edge="1" parent="1" source="dcC46aU1-XgSIU8uLkri-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" target="dcC46aU1-XgSIU8uLkri-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dcC46aU1-XgSIU8uLkri-8" parent="1" style="verticalLabelPosition=bottom;verticalAlign=top;html=1;strokeWidth=2;shape=mxgraph.arrows2.arrow;dy=0.6;dx=40;notch=0;fillColor=#fff2cc;strokeColor=#d6b656;" value="Supabase Webhook&lt;br&gt;to HighLevel from Database" vertex="1">
+          <mxGeometry height="70" width="100" x="20" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="dcC46aU1-XgSIU8uLkri-13" edge="1" parent="1" source="dcC46aU1-XgSIU8uLkri-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="dcC46aU1-XgSIU8uLkri-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dcC46aU1-XgSIU8uLkri-10" parent="1" style="rounded=1;whiteSpace=wrap;html=1;absoluteArcSize=1;arcSize=14;strokeWidth=2;" value="n8n Scenario Developed by ChatGPT!" vertex="1">
+          <mxGeometry height="290" width="320" x="260" y="290" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
