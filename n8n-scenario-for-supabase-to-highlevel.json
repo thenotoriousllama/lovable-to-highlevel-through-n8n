@@ -1,0 +1,429 @@
+{
+  "name": "Supabase → HighLevel Contact Upsert",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "supabase-to-highlevel",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "Webhook",
+      "name": "Webhook (Supabase)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize Supabase payload (supports a few common webhook shapes)\n// Expect contact-like fields somewhere in body.record/body.new/body\n\nconst item = $input.first();\nconst body = item.json.body ?? item.json;\n\n// Common Supabase Database Webhook formats:\n// - { type, table, record, schema, old_record }\n// - { record: {...} }\n// - { new: {...} }\n// - { data: {...} }\nconst record = body.record ?? body.new ?? body.data ?? body;\n\nfunction cleanStr(v) {\n  if (v === null || v === undefined) return '';\n  return String(v).trim();\n}\n\nfunction normalizePhone(v) {\n  const s = cleanStr(v);\n  if (!s) return '';\n  // Keep digits and leading +\n  const plus = s.startsWith('+');\n  const digits = s.replace(/\\D/g, '');\n  if (!digits) return '';\n  // If they didn't include +, you can optionally assume US country code.\n  // NOTE: if you have international leads, remove this assumption.\n  if (!plus && digits.length === 10) return `+1${digits}`;\n  if (plus) return `+${digits}`;\n  return digits.startsWith('1') && digits.length === 11 ? `+${digits}` : `+${digits}`;\n}\n\n// Name parsing\nconst fullName = cleanStr(record.full_name || record.name);\nlet firstName = cleanStr(record.first_name);\nlet lastName = cleanStr(record.last_name);\nif (!firstName && !lastName && fullName) {\n  const parts = fullName.split(/\\s+/).filter(Boolean);\n  firstName = parts.shift() ?? '';\n  lastName = parts.join(' ');\n}\n\nconst out = {\n  submissionId: record.id || record.submission_id || record.uuid || null,\n  locationId: cleanStr(record.location_id || $env.HL_LOCATION_ID),\n  firstName,\n  lastName,\n  email: cleanStr(record.email),\n  phone: normalizePhone(record.phone),\n  source: cleanStr(record.source || 'lovable'),\n  tags: record.tags || [],\n  message: cleanStr(record.message || record.notes || ''),\n  raw: record\n};\n\n// Ensure tags is array\nif (typeof out.tags === 'string') {\n  out.tags = out.tags.split(',').map(t => t.trim()).filter(Boolean);\n}\nif (!Array.isArray(out.tags)) out.tags = [];\n\n// Basic validation\nif (!out.locationId) {\n  throw new Error('Missing locationId. Provide record.location_id or set HL_LOCATION_ID env var.');\n}\nif (!out.email && !out.phone) {\n  throw new Error('Missing both email and phone; need at least one to create/search contact.');\n}\n\nreturn [{ json: out }];"
+      },
+      "id": "Normalize",
+      "name": "Normalize Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://services.leadconnectorhq.com/contacts/search/duplicate",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.HL_API_KEY}}"
+            },
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={\n  \"locationId\": \"{{$json.locationId}}\",\n  \"email\": \"{{$json.email}}\"\n}",
+        "options": {}
+      },
+      "id": "SearchByEmail",
+      "name": "HL - Search Duplicate (Email)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        780,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{!!$json?.contact?.id}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "IfFoundEmail",
+      "name": "Found by Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://services.leadconnectorhq.com/contacts/search/duplicate",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.HL_API_KEY}}"
+            },
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={\n  \"locationId\": \"{{$node[\"Normalize Payload\"].json.locationId}}\",\n  \"phone\": \"{{$node[\"Normalize Payload\"].json.phone}}\"\n}",
+        "options": {}
+      },
+      "id": "SearchByPhone",
+      "name": "HL - Search Duplicate (Phone)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        780,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{!!$json?.contact?.id}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "IfFoundPhone",
+      "name": "Found by Phone?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Decide: create vs update, and build payload\nconst n = $node[\"Normalize Payload\"].json;\n\n// Determine contactId from whichever search succeeded\nconst emailSearch = $node[\"HL - Search Duplicate (Email)\"].json;\nconst phoneSearch = $node[\"HL - Search Duplicate (Phone)\"].json;\n\nconst existingId = emailSearch?.contact?.id || phoneSearch?.contact?.id || null;\n\nconst payload = {\n  firstName: n.firstName,\n  lastName: n.lastName,\n  email: n.email || undefined,\n  phone: n.phone || undefined,\n  source: n.source,\n  tags: n.tags\n};\n\nreturn [{\n  json: {\n    ...n,\n    hlContactId: existingId,\n    hlMode: existingId ? 'update' : 'create',\n    hlPayload: payload\n  }\n}];"
+      },
+      "id": "BuildPayload",
+      "name": "Build HL Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        330
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.hlMode}}",
+              "operation": "equals",
+              "value2": "create"
+            }
+          ]
+        }
+      },
+      "id": "IfCreate",
+      "name": "Create?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        330
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://services.leadconnectorhq.com/contacts/",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.HL_API_KEY}}"
+            },
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={\n  \"locationId\": \"{{$json.locationId}}\",\n  \"firstName\": \"{{$json.hlPayload.firstName}}\",\n  \"lastName\": \"{{$json.hlPayload.lastName}}\",\n  \"email\": \"{{$json.hlPayload.email}}\",\n  \"phone\": \"{{$json.hlPayload.phone}}\",\n  \"source\": \"{{$json.hlPayload.source}}\",\n  \"tags\": {{$json.hlPayload.tags}}\n}",
+        "options": {}
+      },
+      "id": "CreateContact",
+      "name": "HL - Create Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1780,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://services.leadconnectorhq.com/contacts/{{$json.hlContactId}}",
+        "method": "PUT",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.HL_API_KEY}}"
+            },
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={\n  \"locationId\": \"{{$json.locationId}}\",\n  \"firstName\": \"{{$json.hlPayload.firstName}}\",\n  \"lastName\": \"{{$json.hlPayload.lastName}}\",\n  \"email\": \"{{$json.hlPayload.email}}\",\n  \"phone\": \"{{$json.hlPayload.phone}}\",\n  \"source\": \"{{$json.hlPayload.source}}\",\n  \"tags\": {{$json.hlPayload.tags}}\n}",
+        "options": {}
+      },
+      "id": "UpdateContact",
+      "name": "HL - Update Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1780,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Unify response from create/update\nconst base = $node[\"Build HL Payload\"].json;\n\nlet contactId = base.hlContactId;\nlet mode = base.hlMode;\n\nif (mode === 'create') {\n  const resp = $node[\"HL - Create Contact\"].json;\n  contactId = resp?.contact?.id || resp?.id || contactId;\n} else {\n  const resp = $node[\"HL - Update Contact\"].json;\n  contactId = resp?.contact?.id || resp?.id || contactId;\n}\n\nreturn [{\n  json: {\n    ok: true,\n    mode,\n    submissionId: base.submissionId,\n    locationId: base.locationId,\n    contactId,\n    email: base.email,\n    phone: base.phone,\n    tags: base.tags\n  }\n}];"
+      },
+      "id": "Unify",
+      "name": "Unify Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2020,
+        330
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "Respond",
+      "name": "Respond to Supabase",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        2260,
+        330
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook (Supabase)": {
+      "main": [
+        [
+          {
+            "node": "Normalize Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Payload": {
+      "main": [
+        [
+          {
+            "node": "HL - Search Duplicate (Email)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HL - Search Duplicate (Phone)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HL - Search Duplicate (Email)": {
+      "main": [
+        [
+          {
+            "node": "Found by Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Found by Email?": {
+      "main": [
+        [
+          {
+            "node": "Build HL Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build HL Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HL - Search Duplicate (Phone)": {
+      "main": [
+        [
+          {
+            "node": "Found by Phone?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Found by Phone?": {
+      "main": [
+        [
+          {
+            "node": "Build HL Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build HL Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build HL Payload": {
+      "main": [
+        [
+          {
+            "node": "Create?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create?": {
+      "main": [
+        [
+          {
+            "node": "HL - Create Contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HL - Update Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HL - Create Contact": {
+      "main": [
+        [
+          {
+            "node": "Unify Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HL - Update Contact": {
+      "main": [
+        [
+          {
+            "node": "Unify Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unify Result": {
+      "main": [
+        [
+          {
+            "node": "Respond to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "versionId": "1"
+}
